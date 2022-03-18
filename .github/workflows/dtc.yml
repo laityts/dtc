@@ -1,0 +1,90 @@
+# This is a basic workflow that is manually triggered
+
+name: dtc
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on: 
+  push:
+  workflow_dispatch:
+
+jobs:
+  dtc:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Initialization environment
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python bison flex git unzip zip libyaml-dev
+          pip install pyyaml
+
+      - name: compile
+        run: |
+          git clone --depth 1 https://github.com/topjohnwu/FrankeNDK.git
+          export PATH=${PATH}:${{ github.workspace }}/FrankeNDK
+          flex -o dtc-lexer.lex.c dtc-lexer.l
+          bison -d dtc-parser.y
+          ndk-build NDK_DEBUG=0 APP_ABI=all
+          date=$(date +"%y%m%d")
+          echo "date=$(date +%y%m%d)" >> $GITHUB_ENV
+          zip dtc-arm64-v8a-$date.zip libs/arm64-v8a/dtc
+          zip fdtget-arm64-v8a-$date.zip libs/arm64-v8a/fdtget
+          zip fdtput-arm64-v8a-$date.zip libs/arm64-v8a/fdtput
+          zip dtc-armeabi-v7a-$date.zip libs/armeabi-v7a/dtc
+          zip fdtget-armeabi-v7a-$date.zip libs/armeabi-v7a/fdtget
+          zip fdtput-armeabi-v7a-$date.zip libs/armeabi-v7a/fdtput
+          zip dtc-x86_64-$date.zip libs/x86_64/dtc
+          zip fdtget-x86_64-$date.zip libs/x86_64/fdtget
+          zip fdtput-x86_64-$date.zip libs/x86_64/fdtput
+          zip dtc-x86-$date.zip libs/x86/dtc
+          zip fdtget-x86-$date.zip libs/x86/fdtget
+          zip fdtput-x86-$date.zip libs/x86/fdtput
+          ls
+
+      - name: Upload to Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dtc
+          path: |
+            libs/
+          retention-days: 7
+
+      - name: Upload dtc to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dtc-arm64-v8a-${{ env.date }}.zip
+            dtc-armeabi-v7a-${{ env.date }}.zip
+            dtc-x86_64-${{ env.date }}.zip
+            dtc-x86-${{ env.date }}.zip
+          tag_name: dtc-${{ env.date }}
+          body: 使用FrankeNDK编译
+          token: ${{ github.token }}
+
+      - name: Upload fdtget to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            fdtget-arm64-v8a-${{ env.date }}.zip
+            fdtget-armeabi-v7a-${{ env.date }}.zip
+            fdtget-x86_64-${{ env.date }}.zip
+            fdtget-x86-${{ env.date }}.zip
+          tag_name: fdtget-${{ env.date }}
+          body: 使用FrankeNDK编译
+          token: ${{ github.token }}
+
+      - name: Upload fdtput to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            fdtput-arm64-v8a-${{ env.date }}.zip
+            fdtput-armeabi-v7a-${{ env.date }}.zip
+            fdtput-x86_64-${{ env.date }}.zip
+            fdtput-x86-${{ env.date }}.zip
+          tag_name: fdtput-${{ env.date }}
+          body: 使用FrankeNDK编译
+          token: ${{ github.token }}
